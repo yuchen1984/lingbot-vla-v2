@@ -270,6 +270,14 @@ def load_model_weights(
                     _dispatch_parameter(model, name, tensor, dtensor_factory)
             else:
                 if post_training:
+                    # When depth/video distillation is disabled (align_params:{}), the model
+                    # has no align heads/embeddings/task-projections, but the released ckpt
+                    # still carries them. An "unexpected" key is by definition NOT a model
+                    # param, so skipping it can't under-fill the model (the missing-params
+                    # assert below independently guarantees every model param got loaded).
+                    if os.environ.get("LINGBOT_SKIP_ALIGN_HEADS") == "1":
+                        logger.info_rank0(f"Skipping extra ckpt key (align disabled): {name}")
+                        continue
                     error_msg = f"Unexpected key '{name}' found in state dict during Post-Training. This is not allowed!!!"
                     logger.info_rank0(error_msg)
                     raise KeyError(error_msg)

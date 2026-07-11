@@ -290,8 +290,8 @@ class MyTrainingArguments(TrainingArguments):
     lora_rank: int = field(default=16, metadata={"help": "LoRA rank."})
     lora_alpha: int = field(default=32, metadata={"help": "LoRA alpha."})
     lora_target_modules: str = field(
-        default="q,k,v,o,ffn.0,ffn.2",
-        metadata={"help": "Comma-separated LoRA target module name suffixes."},
+        default="q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj",
+        metadata={"help": "Comma-separated LoRA target module name suffixes (Qwen attn+MLP linears; MoE fused experts are group-GEMM ops, not LoRA-able)."},
     )
     lora_trainable_extra: str = field(
         default="state_proj,action_in_proj,action_out_proj,action_time_mlp_in,action_time_mlp_out",

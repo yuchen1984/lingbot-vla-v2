@@ -222,7 +222,10 @@ class VLADataset(Dataset):
             repo_id=repo_id,
             image_transforms=Resize(image_size),
             delta_timestamps=merged_delta,
-            load_image=load_image
+            load_image=load_image,
+            # torchcodec often fails to load its FFmpeg shared libs; pyav (av pkg)
+            # is the portable default. Override with LINGBOT_VIDEO_BACKEND.
+            video_backend=os.environ.get("LINGBOT_VIDEO_BACKEND", "pyav"),
         )
 
         self.return_item = return_item

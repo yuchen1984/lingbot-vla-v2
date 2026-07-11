@@ -67,6 +67,7 @@ train:
   lr_decay_style: constant
   micro_batch_size: 1
   global_batch_size: 4
+  gradient_accumulation_steps: 4    # global = micro(1) * dp(1) * grad_accum(4)
   max_steps: 24000
   ckpt_manager: dcp
   save_steps: 4000

@@ -26,11 +26,14 @@ export CUDA_HOME=${CUDA_HOME:-/usr/local/cuda}
 export PATH="$CUDA_HOME/bin:$PATH"
 export TOKENIZERS_PARALLELISM=false
 export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+# We disable depth/video distillation (align_params:{}); the released ckpt still
+# carries align heads/embs -> skip those extra keys in the strict post-train loader.
+export LINGBOT_SKIP_ALIGN_HEADS=1
 
 # 1. Wait for all 6 weight shards.
 log "waiting for 6 weight shards in $MODEL_DIR ..."
 until [ "$(ls "$MODEL_DIR"/model-*-of-000*.safetensors 2>/dev/null | wc -l)" -ge 6 ] \
-      && [ ! -e "$MODEL_DIR/.cache/huggingface/download"/*.incomplete ]; do
+      && [ "$(find "$MODEL_DIR/.cache/huggingface/download" -name '*.incomplete' 2>/dev/null | wc -l)" -eq 0 ]; do
   sleep 60
 done
 log "weights present ($(du -sh "$MODEL_DIR" | cut -f1))"
