@@ -1,0 +1,37 @@
+# NERO single-arm cloth pick-drop (negY+posY) — 8-dim EE-delta -> canonical.
+# LeRobot v3.0 dataset keys: observation.state[8], action[8],
+# observation.images.image, observation.images.wrist_image.
+# Same 8-dim layout + canonical mapping as nerocube.yaml (only origin_keys differ).
+states:
+  - observation.state.end.position:
+      origin_keys:
+        - observation.state:
+            start: 0
+            end: 6
+  - observation.state.effector.position:
+      origin_keys:
+        - observation.state:
+            start: 6
+            end: 8
+
+actions:
+  - action.end.position:
+      origin_keys:
+        - action:
+            start: 0
+            end: 6
+      subtract_state: false
+  - action.effector.position:
+      origin_keys:
+        - action:
+            start: 6
+            end: 8
+      subtract_state: false
+
+images:
+  - observation.images.camera_top:
+      origin_keys: observation.images.image
+  - observation.images.camera_wrist_left:
+      origin_keys: observation.images.wrist_image
+
+norm_stats: assets/norm_stats/nerocloth.json

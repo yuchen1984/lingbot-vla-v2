@@ -1,0 +1,7 @@
+wheels/
+output/
+*.log
+download.log
+env_build.log
+dl_retry.sh
+.nero_rot_*.urdf

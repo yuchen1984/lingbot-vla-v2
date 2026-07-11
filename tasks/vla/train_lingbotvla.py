@@ -282,6 +282,21 @@ class MyTrainingArguments(TrainingArguments):
         default=False,
         metadata={"help": "Whether to apply FSDP2 for VLM."},
     )
+    # --- LoRA (downstream single-GPU fine-tune; declared-but-unwired upstream) ---
+    use_lora: bool = field(
+        default=False,
+        metadata={"help": "If True, freeze the base model and inject LoRA adapters (peft) + keep the action-expert projections trainable. Enables 6.4B fine-tune on one 24GB GPU."},
+    )
+    lora_rank: int = field(default=16, metadata={"help": "LoRA rank."})
+    lora_alpha: int = field(default=32, metadata={"help": "LoRA alpha."})
+    lora_target_modules: str = field(
+        default="q,k,v,o,ffn.0,ffn.2",
+        metadata={"help": "Comma-separated LoRA target module name suffixes."},
+    )
+    lora_trainable_extra: str = field(
+        default="state_proj,action_in_proj,action_out_proj,action_time_mlp_in,action_time_mlp_out",
+        metadata={"help": "Comma-separated substrings of module/param names to keep FULLY trainable alongside LoRA (the new action-space projections)."},
+    )
 
 @dataclass
 class MyDataArguments(DataArguments):
@@ -416,6 +431,36 @@ def main():
             video_teacher = build_video_model(args.train.align_params['video'])
     from lingbotvla.utils.moe_utils import log_model_param_stats
     log_model_param_stats(model)
+
+    # --- LoRA fine-tune (single-GPU downstream): freeze base -> inject LoRA ->
+    # keep the new action-space projections fully trainable. Must run BEFORE
+    # build_parallelize_model (FSDP wrap) and torch.compile. ---
+    if getattr(args.train, "use_lora", False):
+        from lingbotvla.utils.lora_utils import add_lora_to_model, freeze_parameters
+        targets = [t for t in args.train.lora_target_modules.split(",") if t]
+        freeze_parameters(model)
+        add_lora_to_model(
+            model,
+            lora_rank=args.train.lora_rank,
+            lora_alpha=args.train.lora_alpha,
+            lora_target_modules=args.train.lora_target_modules,
+            lora_target_modules_support=targets,
+        )
+        extra = [e for e in args.train.lora_trainable_extra.split(",") if e]
+        n_extra = 0
+        for name, param in model.named_parameters():
+            if any(tok in name for tok in extra):
+                param.requires_grad_(True)
+                param.data = param.data.to(torch.float32)
+                n_extra += 1
+        n_train = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        n_total = sum(p.numel() for p in model.parameters())
+        logger.info_rank0(
+            f"[LoRA] rank={args.train.lora_rank} alpha={args.train.lora_alpha} "
+            f"targets={targets} extra_trainable_tensors={n_extra} | "
+            f"trainable={n_train/1e6:.2f}M / {n_total/1e9:.2f}B "
+            f"({100.0*n_train/max(1,n_total):.3f}%)"
+        )
 
     model_config = model.config
     helper.print_device_mem_info("VRAM usage after building model")

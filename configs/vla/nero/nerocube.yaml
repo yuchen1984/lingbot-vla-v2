@@ -1,0 +1,83 @@
+model:
+  model_path: /home/yu/models/lingbot-vla-v2-6b          # HF ckpt root (config.json + safetensors)
+  tokenizer_path: /home/yu/models/Qwen3-VL-4B-Instruct
+  post_training: true
+  adanorm_time: true
+  config_key: LingbotVLAV2Config
+  moe_implementation: fused
+
+data:
+  datasets_type: vla
+  data_name: nerocube                                    # -> configs/robot_configs/nerocube.yaml
+  train_path: /home/yu/.cache/huggingface/lerobot/local/nero_cube_mixed_200ep
+  robot_config_root: ./configs/robot_configs
+  joints:
+    - arm.position: 14            # declared to preserve pretrained canonical layout; UNMAPPED -> zero+masked
+    - end.position: 14            # EE pose (we fill 6 of 14)
+    - effector.position: 2        # gripper
+  cameras:
+    - camera_top
+    - camera_wrist_left
+  prompt_type: global
+  norm_type:
+    - end.position: meanstd
+    - effector.position: meanstd
+  num_workers: 4
+  use_future_image: false         # no video distillation
+
+train:
+  output_dir: /home/yu/dev/lingbot-vla-v2/output/nerocube_lora
+  moe_monitor_interval: 1000
+  enable_gradient_checkpointing: true
+  precompute_grid_thw: true
+  vlm_causal: true
+  vlm_fsdp: true
+  attention_implementation: flex_cached
+  # --- MoE architecture (must match the pretrained checkpoint) ---
+  use_moe: true
+  token_moe_layers: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]
+  token_num_experts: 32
+  token_top_k: 4
+  token_moe_intermediate_size: 512
+  token_shared_intermediate_size: 704
+  bias_update_speed: 0
+  sequence_wise_mode: "per_sequence"
+  sequence_wise_loss_coeff: 1e-3
+  router_z_loss_coeff: 1e-4
+  router_activation: "sigmoid"
+  routed_scaling_factor: 4.0
+  use_shared_expert_gate: false
+  use_moe_expert_lr: false
+  # --- optimization ---
+  loss_type: L1_fm
+  data_parallel_mode: fsdp2
+  enable_full_shard: false
+  module_fsdp_enable: true
+  use_compile: false              # keep off first for LoRA/FSDP stability
+  use_wandb: false
+  rmpad: false
+  rmpad_with_pos_ids: false
+  ulysses_parallel_size: 1
+  freeze_vision_encoder: true     # save VRAM; vision frozen
+  tokenizer_max_length: 72
+  action_dim: 55
+  max_action_dim: 55
+  max_state_dim: 55
+  chunk_size: 50
+  optimizer: adamw                # not muon (simpler/faster on 1 GPU)
+  lr: 1.0e-4
+  lr_decay_style: constant
+  micro_batch_size: 1
+  global_batch_size: 4
+  max_steps: 24000
+  ckpt_manager: dcp
+  save_steps: 4000
+  enable_fp32: false              # bf16 base (LoRA adapters fp32)
+  enable_mixed_precision: false   # -> load weights in bf16 (line 375)
+  enable_resume: true
+  # --- LoRA ---
+  use_lora: true
+  lora_rank: 16
+  lora_alpha: 32
+  # depth/video distillation DISABLED (empty -> use_depth_align=False):
+  align_params: {}
