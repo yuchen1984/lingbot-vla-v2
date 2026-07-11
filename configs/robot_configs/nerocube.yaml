@@ -1,5 +1,6 @@
 # NERO single-arm AgileX rigid-cube pick-place — 8-dim EE-delta -> canonical.
-# LeRobot dataset keys (openpi-style): state[8], actions[8], image, wrist_image.
+# LeRobot v3.0 dataset keys: observation.state[8], action[8],
+# observation.images.image, observation.images.wrist_image.
 # state  = [ee_pos(3), axis_angle(3), gripper_2d(2)]
 # action = [dpos(3), dori(3), grip(1), done(1)]  (already a per-step DELTA)
 # Canonical slots used: end.position (EE pose, dims [14:28]) + effector.position ([28:30]).
@@ -8,33 +9,33 @@
 states:
   - observation.state.end.position:
       origin_keys:
-        - state:
+        - observation.state:
             start: 0
             end: 6
   - observation.state.effector.position:
       origin_keys:
-        - state:
+        - observation.state:
             start: 6
             end: 8
 
 actions:
   - action.end.position:
       origin_keys:
-        - actions:
+        - action:
             start: 0
             end: 6
       subtract_state: false        # our action is already a delta, not an absolute pose
   - action.effector.position:
       origin_keys:
-        - actions:
+        - action:
             start: 6
             end: 8
       subtract_state: false
 
 images:
   - observation.images.camera_top:
-      origin_keys: image
+      origin_keys: observation.images.image
   - observation.images.camera_wrist_left:
-      origin_keys: wrist_image
+      origin_keys: observation.images.wrist_image
 
 norm_stats: assets/norm_stats/nerocube.json

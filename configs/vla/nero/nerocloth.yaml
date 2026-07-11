@@ -22,7 +22,8 @@ data:
   norm_type:
     - end.position: meanstd
     - effector.position: meanstd
-  num_workers: 4
+  num_workers: 12
+  prefetch_factor: 4
   use_future_image: false
 
 train:
@@ -65,9 +66,9 @@ train:
   optimizer: adamw
   lr: 1.0e-4
   lr_decay_style: constant
-  micro_batch_size: 1
+  micro_batch_size: 4              # batch 4 samples in ONE forward (was 1 -> GPU starved)
   global_batch_size: 4
-  gradient_accumulation_steps: 4    # global = micro(1) * dp(1) * grad_accum(4)
+  gradient_accumulation_steps: 1    # global = micro(4) * dp(1) * grad_accum(1)
   max_steps: 24000
   ckpt_manager: dcp
   save_steps: 4000
