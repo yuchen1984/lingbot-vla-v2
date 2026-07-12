@@ -75,6 +75,8 @@ class LeRobotDataset(BaseLeRobotDataset):
         load_image: bool = True,
         **kwargs,
     ):
+        # torchcodec often fails to load its FFmpeg libs; default to pyav everywhere.
+        kwargs.setdefault("video_backend", os.environ.get("LINGBOT_VIDEO_BACKEND", "pyav"))
         super().__init__(repo_id, **kwargs)
         self.load_image = load_image
 
