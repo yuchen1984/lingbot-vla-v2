@@ -8,8 +8,8 @@ model:
 
 data:
   datasets_type: vla
-  data_name: nerocube                                    # -> configs/robot_configs/nerocube.yaml
-  train_path: /home/yu/.cache/huggingface/lerobot/local/nero_cube_mixed_200ep_v3
+  data_name: realcube                                    # -> configs/robot_configs/nerocube.yaml
+  train_path: /home/yu/.cache/huggingface/lerobot/local/real_cube_v4_grip_v3
   robot_config_root: ./configs/robot_configs
   joints:
     - arm.position: 14            # declared to preserve pretrained canonical layout; UNMAPPED -> zero+masked
@@ -27,7 +27,7 @@ data:
   use_future_image: false         # no video distillation
 
 train:
-  output_dir: /home/yu/dev/lingbot-vla-v2/output/nerocube_lora
+  output_dir: /home/yu/dev/lingbot-vla-v2/output/realcube_lora
   moe_monitor_interval: 1000
   enable_gradient_checkpointing: true
   precompute_grid_thw: true
