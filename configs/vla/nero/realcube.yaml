@@ -20,8 +20,8 @@ data:
     - camera_wrist_left
   prompt_type: global
   norm_type:
-    - end.position: meanstd
-    - effector.position: meanstd
+    - end.position: bounds_99_woclip
+    - effector.position: bounds_99_woclip
   num_workers: 12
   prefetch_factor: 4
   use_future_image: false         # no video distillation
@@ -66,8 +66,9 @@ train:
   max_state_dim: 55
   chunk_size: 50
   optimizer: adamw                # not muon (simpler/faster on 1 GPU)
-  lr: 1.0e-4
-  lr_decay_style: constant
+  lr: 2.0e-5
+  lr_decay_style: cosine
+  lr_warmup_ratio: 0.03
   micro_batch_size: 4              # batch 4 samples in ONE forward (was 1 -> GPU starved)
   global_batch_size: 4
   gradient_accumulation_steps: 1    # global = micro(4) * dp(1) * grad_accum(1)
@@ -79,7 +80,7 @@ train:
   enable_resume: true
   # --- LoRA ---
   use_lora: true
-  lora_rank: 16
-  lora_alpha: 32
+  lora_rank: 32
+  lora_alpha: 64
   # depth/video distillation DISABLED (empty -> use_depth_align=False):
   align_params: {}
