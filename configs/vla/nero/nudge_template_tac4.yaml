@@ -30,8 +30,8 @@ data:
     - end.position: bounds_99_woclip
     - effector.position: bounds_99_woclip
     - tactile.position: identity
-  num_workers: 12
-  prefetch_factor: 4
+  num_workers: 24
+  prefetch_factor: 8
   use_future_image: false
 
 train:
@@ -77,11 +77,11 @@ train:
   optimizer: adamw
   lr: 2.0e-5
   lr_decay_style: cosine
-  lr_warmup_ratio: 0.0067
-  micro_batch_size: 4
-  global_batch_size: 4
+  lr_warmup_ratio: 0.01           # ~200 warmup steps over 20k (batch6 x 20k = batch4 x 30k samples)
+  micro_batch_size: 6              # 4->6: use spare VRAM, bigger GPU bursts (was 48% util, GPU-starved)
+  global_batch_size: 6
   gradient_accumulation_steps: 1
-  max_steps: 30000
+  max_steps: 20000                # 20k @ batch6 = 120k samples = realcloth batch4 x 30k, faster + higher util
   ckpt_manager: dcp
   save_steps: 4000
   enable_fp32: false
