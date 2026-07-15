@@ -153,8 +153,29 @@ def _dispatch_parameter(
 
     NOTE: FSDP module must use in-place operators.
     """
+    full_name = name  # _find_submodule strips this to the leaf ("weight"/"bias")
     module, name = _find_submodule(module, name)
     orig_tensor = module._parameters[name].data
+    # Tactile-widened state: a config that appends a tactile slot to the canonical
+    # state (max_state_dim/max_action_dim > the released 55) grows state_proj /
+    # action_in_proj / action_out_proj. The released ckpt still carries the narrow
+    # weights, and post-training loading is strict, so zero-pad the pretrained
+    # tensor up to the model's (wider) shape: the original columns keep the pretrained
+    # pose prior and the appended tactile columns start at zero (these layers are
+    # fully trainable via lora_trainable_extra, so they learn from there). Opt-in.
+    if (os.environ.get("LINGBOT_PAD_PROJ") == "1"
+            and any(p in full_name for p in ("state_proj", "action_in_proj", "action_out_proj"))
+            and tuple(tensor.shape) != tuple(orig_tensor.shape)
+            and tensor.dim() == orig_tensor.dim()
+            and all(c <= o for c, o in zip(tensor.shape, orig_tensor.shape))):
+        pad = []
+        for d in range(tensor.dim() - 1, -1, -1):
+            pad.extend([0, orig_tensor.shape[d] - tensor.shape[d]])
+        old_shape = tuple(tensor.shape)
+        tensor = torch.nn.functional.pad(tensor, pad)
+        logger.info_rank0(
+            f"Zero-padded pretrained {full_name} {old_shape} -> {tuple(orig_tensor.shape)} "
+            f"(tactile-widened projection)")
     tensor = tensor.to(orig_tensor)
     if hasattr(orig_tensor, "device_mesh"):  # dtensor
         if orig_tensor.device.type == "cpu":

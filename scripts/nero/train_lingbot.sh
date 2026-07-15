@@ -29,6 +29,14 @@ export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
 # We disable depth/video distillation (align_params:{}); the released ckpt still
 # carries align heads/embs -> skip those extra keys in the strict post-train loader.
 export LINGBOT_SKIP_ALIGN_HEADS=1
+# Tactile-augmented tasks widen the canonical state (max_state_dim 55->94) with a
+# tactile.position slot, so state_proj / action projections are larger than the
+# released ckpt's. Zero-pad the pretrained weights up to the wider shape at load
+# (preserves the pose prior, tactile columns start at zero + train from there).
+case "$TASK" in
+  *tac4*|*tactile*) export LINGBOT_PAD_PROJ=1
+    log "tactile task: LINGBOT_PAD_PROJ=1 (zero-pad state_proj/action projections)";;
+esac
 
 # 1. Wait for all 6 weight shards.
 log "waiting for 6 weight shards in $MODEL_DIR ..."
