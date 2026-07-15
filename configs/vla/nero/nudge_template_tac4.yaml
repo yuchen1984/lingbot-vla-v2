@@ -30,8 +30,8 @@ data:
     - end.position: bounds_99_woclip
     - effector.position: bounds_99_woclip
     - tactile.position: identity
-  num_workers: 24
-  prefetch_factor: 8
+  num_workers: 24                 # must match ckpt dataloader state to resume; RAM cut comes from prefetch 8->4
+  prefetch_factor: 4               # 8->4: async ckpt save + big buffer OOM-killed the box at step 8000
   use_future_image: false
 
 train:
