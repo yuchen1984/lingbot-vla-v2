@@ -1,0 +1,48 @@
+# NERO single-arm TEMPLATE-NUDGE, tactile-augmented ("V2 + tactile" on LingBot base).
+# AUGMENTED data: v0+v1+v4 (132 eps) — same 72-dim schema as nudge_template_tac4,
+# only the dataset (adds nudge_template_v4) and its norm_stats differ.
+#
+# The 72-dim state = the pi0.5 "tac4" state = [ libero-8 | 64 four-finger taxels ].
+#   [0:6]  = ee_pos(3) + axis_angle(3)   -> end.position
+#   [6:8]  = gripper_2d                   -> effector.position (constant open [0.04,-0.04])
+#   [8:72] = 64 taxels (Index/Middle/Ring/Pinky), PRE-SCALED to [-1,1] -> tactile.position.
+# Action stays the 8-dim EE-delta (tactile is an INPUT, not in the action):
+#   action[0:6] -> end.position, action[6:8] -> effector.position.
+states:
+  - observation.state.end.position:
+      origin_keys:
+        - observation.state:
+            start: 0
+            end: 6
+  - observation.state.effector.position:
+      origin_keys:
+        - observation.state:
+            start: 6
+            end: 8
+  - observation.state.tactile.position:
+      origin_keys:
+        - observation.state:
+            start: 8
+            end: 72
+
+actions:
+  - action.end.position:
+      origin_keys:
+        - action:
+            start: 0
+            end: 6
+      subtract_state: false
+  - action.effector.position:
+      origin_keys:
+        - action:
+            start: 6
+            end: 8
+      subtract_state: false
+
+images:
+  - observation.images.camera_top:
+      origin_keys: observation.images.image
+  - observation.images.camera_wrist_left:
+      origin_keys: observation.images.wrist_image
+
+norm_stats: assets/norm_stats/nudge_template_tac4_aug.json
