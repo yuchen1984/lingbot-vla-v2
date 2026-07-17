@@ -1,0 +1,94 @@
+model:
+  model_path: /home/yu/models/lingbot-vla-v2-6b
+  tokenizer_path: /home/yu/models/Qwen3-VL-4B-Instruct
+  post_training: true
+  adanorm_time: true
+  config_key: LingbotVLAV2Config
+  moe_implementation: fused
+
+data:
+  datasets_type: vla
+  data_name: nudge_template_tac4_aug                     # -> configs/robot_configs/nudge_template_tac4_aug.yaml (unchanged)
+  train_path: /home/yu/.cache/huggingface/lerobot/local/nudge_template_aug_tac4_132ep_v3
+  robot_config_root: ./configs/robot_configs
+  # AUGMENTED data: v0+v1+v4 (132 eps). tactile.position (64) = 4-finger taxels
+  # (state[8:72]); widens the canonical state 30->94. Same dataset as the chunk-50
+  # run — the v3 dataset is chunk-agnostic (delta_timestamps assembled at load).
+  joints:
+    - arm.position: 14
+    - end.position: 14
+    - effector.position: 2
+    - tactile.position: 64
+  cameras:
+    - camera_top
+    - camera_wrist_left
+  prompt_type: global
+  norm_type:
+    - end.position: bounds_99_woclip
+    - effector.position: bounds_99_woclip
+    - tactile.position: identity
+  num_workers: 24                 # matches ckpt dataloader state (ASSERTED on resume — do not change)
+  prefetch_factor: 2               # 4->2: prefetch-4 OOM-killed at the async ckpt save (6.4B model in
+                                   # CPU RAM + 24x buffers > 62GB). NOT asserted on resume, so halving is safe.
+  use_future_image: false
+
+train:
+  output_dir: /home/yu/dev/lingbot-vla-v2/output/nudge_template_tac4_aug_c10_lora
+  moe_monitor_interval: 1000
+  enable_gradient_checkpointing: true
+  precompute_grid_thw: true
+  vlm_causal: true
+  vlm_fsdp: true
+  attention_implementation: flex_cached
+  use_moe: true
+  token_moe_layers: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]
+  token_num_experts: 32
+  token_top_k: 4
+  token_moe_intermediate_size: 512
+  token_shared_intermediate_size: 704
+  bias_update_speed: 0
+  sequence_wise_mode: "per_sequence"
+  sequence_wise_loss_coeff: 1e-3
+  router_z_loss_coeff: 1e-4
+  router_activation: "sigmoid"
+  routed_scaling_factor: 4.0
+  use_shared_expert_gate: false
+  use_moe_expert_lr: false
+  loss_type: L1_fm
+  data_parallel_mode: fsdp2
+  enable_full_shard: false
+  module_fsdp_enable: true
+  use_compile: false
+  use_wandb: false
+  rmpad: false
+  rmpad_with_pos_ids: false
+  ulysses_parallel_size: 1
+  freeze_vision_encoder: true
+  tokenizer_max_length: 72
+  # Canonical state/action widened 55 -> 94 (= arm 14 + end 14 + effector 2 + tactile 64);
+  # pretrained projections zero-padded 55->94 at load via LINGBOT_PAD_PROJ=1 (train_lingbot.sh
+  # sets it for *tac4* tasks).
+  action_dim: 94
+  max_action_dim: 94
+  max_state_dim: 94
+  # chunk_size 50 -> 10: match pi0.5's action horizon so the served policy re-observes
+  # 5x more often on the real robot. The v3 dataset is chunk-agnostic (delta_timestamps
+  # at load) -> NO re-repackage. Serve with `serve_lingbot.py --chunk 10` + GUI replan 10.
+  chunk_size: 10
+  optimizer: adamw
+  lr: 2.0e-5
+  lr_decay_style: cosine
+  lr_warmup_ratio: 0.01           # ~300 warmup steps over 30k
+  micro_batch_size: 6
+  global_batch_size: 6
+  gradient_accumulation_steps: 1
+  max_steps: 30000                # fresh 30k on the augmented v0+v1+v4 data
+  ckpt_manager: dcp
+  save_steps: 4000
+  enable_fp32: false
+  enable_mixed_precision: false
+  enable_resume: true
+  use_lora: true
+  lora_rank: 32
+  lora_alpha: 64
+  align_params: {}
